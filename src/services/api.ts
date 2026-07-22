@@ -10,6 +10,33 @@ function getAuthHeaders(): HeadersInit {
   };
 }
 
+async function handleResponse(res: Response): Promise<any> {
+  let text = '';
+  try {
+    text = await res.text();
+  } catch {
+    throw new Error(`Failed to read response from server (${res.status})`);
+  }
+
+  let json: any = null;
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+      throw new Error('Received non-JSON response from server');
+    }
+  }
+
+  if (!res.ok) {
+    throw new Error(json?.error || `Request failed with status ${res.status}`);
+  }
+
+  return json;
+}
+
 export const api = {
   async register(data: {
     email: string;
@@ -23,9 +50,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Registration failed');
-    return json;
+    return await handleResponse(res);
   },
 
   async login(data: {
@@ -37,18 +62,14 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Login failed');
-    return json;
+    return await handleResponse(res);
   },
 
   async getMe(): Promise<{ user: User }> {
     const res = await fetch(`${API_BASE}/auth/me`, {
       headers: getAuthHeaders(),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to fetch user');
-    return json;
+    return await handleResponse(res);
   },
 
   async updateProfile(data: {
@@ -61,17 +82,14 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to update profile');
-    return json;
+    return await handleResponse(res);
   },
 
   async searchUsersByEmail(email: string): Promise<User[]> {
     const res = await fetch(`${API_BASE}/users/search?email=${encodeURIComponent(email)}`, {
       headers: getAuthHeaders(),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Search failed');
+    const json = await handleResponse(res);
     return json.users || [];
   },
 
@@ -79,8 +97,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/users`, {
       headers: getAuthHeaders(),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to fetch users');
+    const json = await handleResponse(res);
     return json.users || [];
   },
 
@@ -88,8 +105,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/chats`, {
       headers: getAuthHeaders(),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to fetch chats');
+    const json = await handleResponse(res);
     return json.chats || [];
   },
 
@@ -99,8 +115,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ targetEmail }),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to start chat');
+    const json = await handleResponse(res);
     return json.chat;
   },
 
@@ -114,8 +129,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to create group');
+    const json = await handleResponse(res);
     return json.chat;
   },
 
@@ -123,8 +137,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/chats/${chatId}/messages`, {
       headers: getAuthHeaders(),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to fetch messages');
+    const json = await handleResponse(res);
     return json.messages || [];
   },
 
@@ -138,8 +151,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ content, attachments }),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to send message');
+    const json = await handleResponse(res);
     return json.message;
   },
 
@@ -149,8 +161,6 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ emoji }),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to add reaction');
-    return json;
+    return await handleResponse(res);
   },
 };
