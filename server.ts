@@ -572,6 +572,11 @@ app.post('/api/messages/:messageId/reaction', (req, res) => {
   return res.json({ reactions: targetMsg.reactions });
 });
 
+// Catch-all 404 for unhandled API requests
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: `API route ${req.originalUrl} not found` });
+});
+
 // Create HTTP Server & WebSocket Server
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });

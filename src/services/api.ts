@@ -23,10 +23,14 @@ async function handleResponse(res: Response): Promise<any> {
     try {
       json = JSON.parse(text);
     } catch {
-      if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
+      // Returned non-JSON response (e.g. HTML 404 or index page)
+      if (res.status === 404) {
+        throw new Error('Requested resource not found (404)');
       }
-      throw new Error('Received non-JSON response from server');
+      if (!res.ok) {
+        throw new Error(`Server request failed (${res.status})`);
+      }
+      return {};
     }
   }
 

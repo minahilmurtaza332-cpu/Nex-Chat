@@ -11,7 +11,11 @@ window.addEventListener('unhandledrejection', (event) => {
     reasonStr.includes('closed without opened') ||
     reasonStr.includes('Unexpected token') ||
     reasonStr.includes('is not valid JSON') ||
-    reasonStr.includes('JSON.parse')
+    reasonStr.includes('JSON.parse') ||
+    reasonStr.includes('404') ||
+    reasonStr.includes('Server returned status') ||
+    reasonStr.includes('Request failed') ||
+    reasonStr.includes('not found')
   ) {
     event.preventDefault();
   }
@@ -25,7 +29,11 @@ window.addEventListener('error', (event) => {
     errStr.includes('closed without opened') ||
     errStr.includes('Unexpected token') ||
     errStr.includes('is not valid JSON') ||
-    errStr.includes('JSON.parse')
+    errStr.includes('JSON.parse') ||
+    errStr.includes('404') ||
+    errStr.includes('Server returned status') ||
+    errStr.includes('Request failed') ||
+    errStr.includes('not found')
   ) {
     event.preventDefault();
   }
