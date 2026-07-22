@@ -225,7 +225,52 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               </button>
             </form>
 
-            <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+            <div className="mt-4 pt-4 border-t border-slate-800/80">
+              <p className="text-xs text-slate-400 font-medium mb-2 text-center">Quick 1-Click Demo Login:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoading(true);
+                    setError(null);
+                    try {
+                      const res = await api.login({ email: 'demo@email.com', password: '123' });
+                      onLoginSuccess(res.user, res.token);
+                    } catch (err: any) {
+                      setError(err.message || 'Demo login failed');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="py-2 px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-slate-200 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>Demo User</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoading(true);
+                    setError(null);
+                    try {
+                      const res = await api.login({ email: 'alex@email.com', password: '123' });
+                      onLoginSuccess(res.user, res.token);
+                    } catch (err: any) {
+                      setError(err.message || 'Demo login failed');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="py-2 px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-slate-200 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  <span>Alex Rivera</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 text-center">
               <p className="text-xs text-slate-400">
                 {isSignUp ? 'Already have an Email account?' : "Don't have an account yet?"}{' '}
                 <button

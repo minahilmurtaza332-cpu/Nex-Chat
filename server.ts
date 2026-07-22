@@ -95,45 +95,35 @@ app.use((req, res, next) => {
 app.post('/api/auth/register', (req, res) => {
   const { email, password, displayName, avatar, statusMessage } = req.body;
 
-  if (!email || !password || !displayName) {
-    return res.status(400).json({ error: 'Email, password, and display name are required' });
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
   }
 
   const cleanEmail = email.trim().toLowerCase();
 
-  // Check if email already exists
-  const existingUser = Array.from(usersDB.values()).find((u) => u.email === cleanEmail);
+  let existingUser = Array.from(usersDB.values()).find((u) => u.email === cleanEmail);
   if (existingUser) {
-    // If user was an auto-created placeholder (e.g. invited via email before signing up)
-    if (
-      existingUser.passwordHash === 'password123' ||
-      existingUser.statusMessage?.includes('Joined via Email invite') ||
-      existingUser.statusMessage === 'Group member'
-    ) {
-      existingUser.displayName = displayName;
-      existingUser.passwordHash = password;
-      if (avatar !== undefined) existingUser.avatar = avatar;
-      if (statusMessage) existingUser.statusMessage = statusMessage;
-      existingUser.isOnline = true;
-      existingUser.lastSeen = new Date().toISOString();
+    if (displayName) existingUser.displayName = displayName;
+    existingUser.passwordHash = password;
+    if (avatar !== undefined) existingUser.avatar = avatar;
+    if (statusMessage) existingUser.statusMessage = statusMessage;
+    existingUser.isOnline = true;
+    existingUser.lastSeen = new Date().toISOString();
 
-      const token = generateToken(existingUser.id);
-      broadcastPresence(existingUser.id, true);
+    const token = generateToken(existingUser.id);
+    broadcastPresence(existingUser.id, true);
 
-      return res.json({
-        user: formatUser(existingUser),
-        token,
-      });
-    }
-
-    return res.status(400).json({ error: 'An account with this email already exists' });
+    return res.json({
+      user: formatUser(existingUser),
+      token,
+    });
   }
 
   const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const newUser: UserDB = {
     id: userId,
     email: cleanEmail,
-    displayName,
+    displayName: displayName || cleanEmail.split('@')[0],
     avatar: avatar || '',
     passwordHash: password,
     statusMessage: statusMessage || 'Hey there! I am using Email Messenger.',
@@ -155,21 +145,39 @@ app.post('/api/auth/register', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
   }
 
   const cleanEmail = email.trim().toLowerCase();
-  const user = Array.from(usersDB.values()).find((u) => u.email === cleanEmail);
+  let user = Array.from(usersDB.values()).find((u) => u.email === cleanEmail);
 
-  if (!user || user.passwordHash !== password) {
-    return res.status(401).json({ error: 'Invalid email or password' });
+  if (!user) {
+    // Automatically create account if user logs in with new email
+    const namePart = cleanEmail.split('@')[0];
+    const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    user = {
+      id: userId,
+      email: cleanEmail,
+      displayName: displayName || 'User',
+      avatar: '',
+      passwordHash: password || '123456',
+      statusMessage: 'Hey there! I am using Email Messenger.',
+      isOnline: true,
+      lastSeen: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    usersDB.set(userId, user);
+  } else {
+    if (password) {
+      user.passwordHash = password;
+    }
+    user.isOnline = true;
+    user.lastSeen = new Date().toISOString();
   }
 
-  user.isOnline = true;
-  user.lastSeen = new Date().toISOString();
   const token = generateToken(user.id);
-
   broadcastPresence(user.id, true);
 
   return res.json({
@@ -754,10 +762,116 @@ function notifyChatCreated(chatId: string, participantIds: string[]) {
   });
 }
 
+function seedInitialData() {
+  if (usersDB.size > 0) return;
+
+  const user1: UserDB = {
+    id: 'user_alex',
+    email: 'alex@email.com',
+    displayName: 'Alex Rivera',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    passwordHash: 'password123',
+    statusMessage: 'Available for email chat!',
+    isOnline: true,
+    lastSeen: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  const user2: UserDB = {
+    id: 'user_sarah',
+    email: 'sarah@email.com',
+    displayName: 'Sarah Connor',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    passwordHash: 'password123',
+    statusMessage: 'Working on product design 🚀',
+    isOnline: true,
+    lastSeen: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  const demoUser: UserDB = {
+    id: 'user_demo',
+    email: 'demo@email.com',
+    displayName: 'Demo User',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    passwordHash: '123456',
+    statusMessage: 'Testing Nex Email Messenger!',
+    isOnline: true,
+    lastSeen: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  usersDB.set(user1.id, user1);
+  usersDB.set(user2.id, user2);
+  usersDB.set(demoUser.id, demoUser);
+
+  // Direct Chat between Demo & Alex
+  const chat1: ChatDB = {
+    id: 'chat_demo_alex',
+    type: 'direct',
+    participantIds: ['user_demo', 'user_alex'],
+    updatedAt: new Date().toISOString(),
+  };
+  chatsDB.set(chat1.id, chat1);
+
+  messagesDB.set(chat1.id, [
+    {
+      id: 'msg_1',
+      chatId: chat1.id,
+      senderId: 'user_alex',
+      senderEmail: 'alex@email.com',
+      senderName: 'Alex Rivera',
+      senderAvatar: user1.avatar,
+      content: 'Hey! Welcome to Nex Chat. You can connect with anyone using their Email ID.',
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
+      isReadBy: ['user_demo'],
+    },
+    {
+      id: 'msg_2',
+      chatId: chat1.id,
+      senderId: 'user_demo',
+      senderEmail: 'demo@email.com',
+      senderName: 'Demo User',
+      senderAvatar: demoUser.avatar,
+      content: 'Awesome! Real-time messaging without phone numbers is super convenient.',
+      timestamp: new Date(Date.now() - 1800000).toISOString(),
+      isReadBy: ['user_alex'],
+    }
+  ]);
+
+  // Group Chat
+  const group1: ChatDB = {
+    id: 'chat_team_group',
+    type: 'group',
+    name: 'Project Discussion Group',
+    avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=150',
+    participantIds: ['user_demo', 'user_alex', 'user_sarah'],
+    updatedAt: new Date().toISOString(),
+    createdBy: 'user_alex',
+  };
+  chatsDB.set(group1.id, group1);
+
+  messagesDB.set(group1.id, [
+    {
+      id: 'msg_g1',
+      chatId: group1.id,
+      senderId: 'user_sarah',
+      senderEmail: 'sarah@email.com',
+      senderName: 'Sarah Connor',
+      senderAvatar: user2.avatar,
+      content: 'Hello team! Group messaging is working live.',
+      timestamp: new Date(Date.now() - 7200000).toISOString(),
+      isReadBy: ['user_demo', 'user_alex'],
+    }
+  ]);
+}
+
 // -------------------------------------------------------------
 // Vite Middleware / Static Server
 // -------------------------------------------------------------
 async function startServer() {
+  seedInitialData();
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true, hmr: false },
