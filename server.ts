@@ -525,7 +525,7 @@ app.post('/api/chats/:chatId/messages', (req, res) => {
 });
 
 // Add Reaction to Message
-app.post('/api/messages/:messageId/reaction', (req, res) => {
+app.post(['/api/messages/:messageId/reaction', '/api/messages/:messageId/reactions'], (req, res) => {
   const user = (req as any).user as UserDB;
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
 

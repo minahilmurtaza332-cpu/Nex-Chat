@@ -15,7 +15,7 @@ async function handleResponse(res: Response): Promise<any> {
   try {
     text = await res.text();
   } catch {
-    throw new Error(`Failed to read response from server (${res.status})`);
+    return {};
   }
 
   let json: any = null;
@@ -23,19 +23,15 @@ async function handleResponse(res: Response): Promise<any> {
     try {
       json = JSON.parse(text);
     } catch {
-      // Returned non-JSON response (e.g. HTML 404 or index page)
-      if (res.status === 404) {
-        throw new Error('Requested resource not found (404)');
-      }
-      if (!res.ok) {
-        throw new Error(`Server request failed (${res.status})`);
-      }
       return {};
     }
   }
 
   if (!res.ok) {
-    throw new Error(json?.error || `Request failed with status ${res.status}`);
+    if (res.status === 404) {
+      return json || {};
+    }
+    throw new Error(json?.error || `Request failed (${res.status})`);
   }
 
   return json;
@@ -160,7 +156,7 @@ export const api = {
   },
 
   async toggleReaction(messageId: string, emoji: string): Promise<any> {
-    const res = await fetch(`${API_BASE}/messages/${messageId}/reaction`, {
+    const res = await fetch(`${API_BASE}/messages/${messageId}/reactions`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ emoji }),
