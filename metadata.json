@@ -1,0 +1,6 @@
+{
+  "name": "Nex Chat",
+  "description": "Secure real-time messaging web app with private chats, group messaging, and contact search by email.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
