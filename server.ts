@@ -100,98 +100,106 @@ app.use((req, res, next) => {
 });
 
 // Register
-app.post('/api/auth/register', (req, res) => {
-  const { email, password, displayName, avatar, statusMessage } = req.body;
+app.post(['/api/auth/register', '/api/auth/register/'], (req, res) => {
+  try {
+    const { email, password, displayName, avatar, statusMessage } = req.body || {};
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
+    const rawEmail = (email || '').toString().trim();
+    const cleanEmail = rawEmail ? rawEmail.toLowerCase() : `user_${Date.now()}@email.com`;
+    const pwd = (password || '123456').toString();
 
-  const cleanEmail = email.trim().toLowerCase();
+    let existingUser = Array.from(usersDB.values()).find((u) => u.email === cleanEmail);
+    if (existingUser) {
+      if (displayName) existingUser.displayName = displayName.toString();
+      existingUser.passwordHash = pwd;
+      if (avatar !== undefined) existingUser.avatar = avatar;
+      if (statusMessage) existingUser.statusMessage = statusMessage;
+      existingUser.isOnline = true;
+      existingUser.lastSeen = new Date().toISOString();
 
-  let existingUser = Array.from(usersDB.values()).find((u) => u.email === cleanEmail);
-  if (existingUser) {
-    if (displayName) existingUser.displayName = displayName;
-    existingUser.passwordHash = password;
-    if (avatar !== undefined) existingUser.avatar = avatar;
-    if (statusMessage) existingUser.statusMessage = statusMessage;
-    existingUser.isOnline = true;
-    existingUser.lastSeen = new Date().toISOString();
+      const token = generateToken(existingUser.id);
+      broadcastPresence(existingUser.id, true);
 
-    const token = generateToken(existingUser.id);
-    broadcastPresence(existingUser.id, true);
+      return res.json({
+        user: formatUser(existingUser),
+        token,
+      });
+    }
 
-    return res.json({
-      user: formatUser(existingUser),
-      token,
-    });
-  }
-
-  const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const newUser: UserDB = {
-    id: userId,
-    email: cleanEmail,
-    displayName: displayName || cleanEmail.split('@')[0],
-    avatar: avatar || '',
-    passwordHash: password,
-    statusMessage: statusMessage || 'Hey there! I am using Email Messenger.',
-    isOnline: true,
-    lastSeen: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-  };
-
-  usersDB.set(userId, newUser);
-  const token = generateToken(userId);
-
-  return res.json({
-    user: formatUser(newUser),
-    token,
-  });
-});
-
-// Login
-app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
-  }
-
-  const cleanEmail = email.trim().toLowerCase();
-  let user = Array.from(usersDB.values()).find((u) => u.email === cleanEmail);
-
-  if (!user) {
-    // Automatically create account if user logs in with new email
-    const namePart = cleanEmail.split('@')[0];
-    const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
     const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    user = {
+    const namePart = cleanEmail.split('@')[0] || 'User';
+    const computedName = (displayName || namePart).toString();
+
+    const newUser: UserDB = {
       id: userId,
       email: cleanEmail,
-      displayName: displayName || 'User',
-      avatar: '',
-      passwordHash: password || '123456',
-      statusMessage: 'Hey there! I am using Email Messenger.',
+      displayName: computedName.charAt(0).toUpperCase() + computedName.slice(1),
+      avatar: avatar || '',
+      passwordHash: pwd,
+      statusMessage: statusMessage || 'Hey there! I am using Email Messenger.',
       isOnline: true,
       lastSeen: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };
-    usersDB.set(userId, user);
-  } else {
-    if (password) {
-      user.passwordHash = password;
-    }
-    user.isOnline = true;
-    user.lastSeen = new Date().toISOString();
+
+    usersDB.set(userId, newUser);
+    const token = generateToken(userId);
+
+    return res.json({
+      user: formatUser(newUser),
+      token,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Registration error' });
   }
+});
 
-  const token = generateToken(user.id);
-  broadcastPresence(user.id, true);
+// Login
+app.post(['/api/auth/login', '/api/auth/login/'], (req, res) => {
+  try {
+    const { email, password } = req.body || {};
 
-  return res.json({
-    user: formatUser(user),
-    token,
-  });
+    const rawEmail = (email || '').toString().trim();
+    const cleanEmail = rawEmail ? rawEmail.toLowerCase() : `user_${Date.now()}@email.com`;
+    const pwd = (password || '123456').toString();
+
+    let user = Array.from(usersDB.values()).find((u) => u.email === cleanEmail);
+
+    if (!user) {
+      // Automatically create account if user logs in with new email
+      const namePart = cleanEmail.split('@')[0] || 'User';
+      const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+      const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      user = {
+        id: userId,
+        email: cleanEmail,
+        displayName: displayName || 'User',
+        avatar: '',
+        passwordHash: pwd,
+        statusMessage: 'Hey there! I am using Email Messenger.',
+        isOnline: true,
+        lastSeen: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      usersDB.set(userId, user);
+    } else {
+      if (password) {
+        user.passwordHash = pwd;
+      }
+      user.isOnline = true;
+      user.lastSeen = new Date().toISOString();
+    }
+
+    const token = generateToken(user.id);
+    broadcastPresence(user.id, true);
+
+    return res.json({
+      user: formatUser(user),
+      token,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Login error' });
+  }
 });
 
 // Current User

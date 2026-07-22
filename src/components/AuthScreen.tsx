@@ -163,7 +163,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     <input
                       type="text"
-                      required
                       placeholder="e.g. Alex Smith"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
@@ -178,8 +177,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
-                    type="email"
-                    required
+                    type="text"
                     placeholder="yourname@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -194,7 +192,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="password"
-                    required
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
