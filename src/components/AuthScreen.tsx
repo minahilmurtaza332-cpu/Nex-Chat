@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Mail, Lock, User, Sparkles, Shield, MessageSquare, Zap, Users, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { api } from '../services/api';
 import { User as UserType } from '../types';
-
 interface AuthScreenProps {
   onLoginSuccess: (user: UserType, token: string) => void;
 }
