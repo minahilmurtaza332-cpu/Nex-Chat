@@ -19,23 +19,34 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError('Please enter your Email ID');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (isSignUp) {
-        if (!displayName.trim()) {
-          throw new Error('Please enter your name');
-        }
+        const nameToUse = displayName.trim() || cleanEmail.split('@')[0];
         const res = await api.register({
-          email,
-          password,
-          displayName,
+          email: cleanEmail,
+          password: password || '123456',
+          displayName: nameToUse,
           avatar: '',
           statusMessage,
         });
+        if (!res || !res.user || !res.token) {
+          throw new Error('Account creation failed. Please try again.');
+        }
         onLoginSuccess(res.user, res.token);
       } else {
-        const res = await api.login({ email, password });
+        const res = await api.login({ email: cleanEmail, password: password || '123456' });
+        if (!res || !res.user || !res.token) {
+          throw new Error('Login failed. Please check your details.');
+        }
         onLoginSuccess(res.user, res.token);
       }
     } catch (err: any) {

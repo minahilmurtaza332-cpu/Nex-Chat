@@ -15,6 +15,9 @@ async function handleResponse(res: Response): Promise<any> {
   try {
     text = await res.text();
   } catch {
+    if (!res.ok) {
+      throw new Error(`Request failed (${res.status})`);
+    }
     return {};
   }
 
@@ -23,14 +26,14 @@ async function handleResponse(res: Response): Promise<any> {
     try {
       json = JSON.parse(text);
     } catch {
+      if (!res.ok) {
+        throw new Error(`Request failed (${res.status})`);
+      }
       return {};
     }
   }
 
   if (!res.ok) {
-    if (res.status === 404) {
-      return json || {};
-    }
     throw new Error(json?.error || `Request failed (${res.status})`);
   }
 
