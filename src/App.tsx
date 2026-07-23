@@ -86,8 +86,21 @@ export default function App() {
   useEffect(() => {
     if (activeChatId) {
       loadMessages(activeChatId);
+      const msgInterval = setInterval(() => {
+        loadMessages(activeChatId);
+      }, 1500);
+      return () => clearInterval(msgInterval);
     }
   }, [activeChatId, loadMessages]);
+
+  useEffect(() => {
+    if (currentUser && token) {
+      const chatInterval = setInterval(() => {
+        loadChats();
+      }, 3000);
+      return () => clearInterval(chatInterval);
+    }
+  }, [currentUser, token, loadChats]);
 
   // Handle WebSocket Real-Time Events
   useEffect(() => {
